@@ -39,4 +39,45 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.get("/all", async (req, res) => {
+  const allUser = await User.find();
+  if (!allUser) {
+    res.status(404).send({ message: "No user found" });
+    return;
+  }
+  res.status(200).send(allUser);
+});
+
+router.get("/one/:id", async (req, res) => {
+  const user = await User.findById(req.params.id);
+  user
+    ? res.status(200).json(user)
+    : res.status(404).json({ message: "something went wrong" });
+});
+
+router.put("/add-match", async (req, res) => {
+  const { myId, yourId } = req.query;
+  const newUser = await User.findByIdAndUpdate(
+    myId,
+    { $addToSet: { matches: yourId } },
+    { new: true }
+  );
+  newUser
+    ? res.status(200).json(newUser)
+    : res.status(404).json({ message: "something went wrong" });
+});
+
+router.put("/profile/:id", async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    user
+      ? res.status(200).send(user)
+      : res.status(400).send({ message: "Something went wrong" });
+  } catch (err) {
+    res.status(500).send({ message: "Error" });
+  }
+});
+
 module.exports = router;
