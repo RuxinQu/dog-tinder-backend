@@ -69,7 +69,7 @@ router.post(
       const files = req.files;
       // Create an array of the uploaded file URLs
       const imgs = files.map((file) => {
-        return { url: file.location };
+        return { original: file.location };
       });
       // Do something with the file URLs, such as storing them in a database or sending them in a response
       res.status(200).send({ imgs });

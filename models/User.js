@@ -1,7 +1,7 @@
 const { Schema, Types, model } = require("mongoose");
 const bcrypt = require("bcrypt");
 const imageSchema = new Schema({
-  url: {
+  original: {
     type: String,
   },
 });
