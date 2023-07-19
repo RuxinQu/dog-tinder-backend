@@ -1,6 +1,10 @@
 const { Schema, Types, model } = require("mongoose");
 const bcrypt = require("bcrypt");
-
+const imageSchema = new Schema({
+  url: {
+    type: String,
+  },
+});
 const userSchema = new Schema(
   {
     email: {
@@ -31,7 +35,7 @@ const userSchema = new Schema(
     description: {
       type: String,
     },
-    img: [String],
+    imgs: [imageSchema],
     matches: [String],
   },
   {

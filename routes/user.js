@@ -1,5 +1,7 @@
 const router = require("express").Router();
 const { User } = require("../models");
+const { upload, removeFileFromS3 } = require("../util/imageHelper");
+const { isLoggedIn } = require("../util/auth");
 const { signToken } = require("../util/auth");
 
 router.post("/register", async (req, res) => {
@@ -39,6 +41,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
+//get all users
 router.get("/all", async (req, res) => {
   const allUser = await User.find();
   if (!allUser) {
@@ -48,12 +51,57 @@ router.get("/all", async (req, res) => {
   res.status(200).send(allUser);
 });
 
+//return a user with a specific id
 router.get("/one/:id", async (req, res) => {
   const user = await User.findById(req.params.id);
   user
     ? res.status(200).json(user)
     : res.status(404).json({ message: "something went wrong" });
 });
+
+//upload profile images
+router.post(
+  "/upload-imgs",
+  // isLoggedIn,
+  upload.array("imgs", 10),
+  async (req, res) => {
+    try {
+      const files = req.files;
+      // Create an array of the uploaded file URLs
+      const imgs = files.map((file) => {
+        return { url: file.location };
+      });
+      // Do something with the file URLs, such as storing them in a database or sending them in a response
+      res.status(200).send({ imgs });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send({
+        message: "Error uploading files",
+        error: err.message,
+      });
+    }
+  }
+);
+
+//remove profile images
+router.delete(
+  "/delete-img/:key/user/:userId/img/:imgId",
+  // isLoggedIn,
+  removeFileFromS3,
+  async (req, res) => {
+    // code to delete the image from the database
+    const { userId, imgId } = req.params;
+    try {
+      await User.findByIdAndUpdate(
+        userId,
+        { $pull: { imgs: { _id: imgId } } },
+        { new: true }
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  }
+);
 
 router.put("/add-match", async (req, res) => {
   const { myId, yourId } = req.query;
