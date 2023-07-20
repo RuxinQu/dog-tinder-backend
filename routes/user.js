@@ -1,8 +1,7 @@
 const router = require("express").Router();
 const { User } = require("../models");
 const { upload, removeFileFromS3 } = require("../util/imageHelper");
-const { isLoggedIn } = require("../util/auth");
-const { signToken } = require("../util/auth");
+const { signToken, isLoggedIn } = require("../util/auth");
 
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
@@ -42,7 +41,7 @@ router.post("/login", async (req, res) => {
 });
 
 //get all users
-router.get("/all", async (req, res) => {
+router.get("/all", isLoggedIn, async (req, res) => {
   const allUser = await User.find();
   if (!allUser) {
     res.status(404).send({ message: "No user found" });
@@ -52,7 +51,7 @@ router.get("/all", async (req, res) => {
 });
 
 //return a user with a specific id
-router.get("/one/:id", async (req, res) => {
+router.get("/one/:id", isLoggedIn, async (req, res) => {
   const user = await User.findById(req.params.id);
   user
     ? res.status(200).json(user)
@@ -62,7 +61,7 @@ router.get("/one/:id", async (req, res) => {
 //upload profile images
 router.post(
   "/upload-imgs",
-  // isLoggedIn,
+  isLoggedIn,
   upload.array("imgs", 10),
   async (req, res) => {
     try {
@@ -86,7 +85,7 @@ router.post(
 //remove profile images
 router.delete(
   "/delete-img/:key/user/:userId/img/:imgId",
-  // isLoggedIn,
+  isLoggedIn,
   removeFileFromS3,
   async (req, res) => {
     // code to delete the image from the database
@@ -103,7 +102,7 @@ router.delete(
   }
 );
 
-router.put("/add-match", async (req, res) => {
+router.put("/add-match", isLoggedIn, async (req, res) => {
   const { myId, yourId } = req.query;
   const newUser = await User.findByIdAndUpdate(
     myId,
@@ -115,7 +114,7 @@ router.put("/add-match", async (req, res) => {
     : res.status(404).json({ message: "something went wrong" });
 });
 
-router.put("/profile/:id", async (req, res) => {
+router.put("/profile/:id", isLoggedIn, async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
