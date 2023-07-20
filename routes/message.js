@@ -1,7 +1,8 @@
 const router = require("express").Router();
 const { Message } = require("../models");
+const { isLoggedIn } = require("../util/auth");
 
-router.post("/add-message", async (req, res) => {
+router.post("/add-message", isLoggedIn, async (req, res) => {
   try {
     const newMessage = await Message.create(req.body);
     newMessage
@@ -12,7 +13,7 @@ router.post("/add-message", async (req, res) => {
   }
 });
 
-router.get("/one", async (req, res) => {
+router.get("/one", isLoggedIn, async (req, res) => {
   const { fromId, receiveId } = req.query;
   try {
     const messagesFromOne = await Message.find({
