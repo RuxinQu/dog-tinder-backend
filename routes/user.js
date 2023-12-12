@@ -96,8 +96,10 @@ router.delete(
         { $pull: { imgs: { _id: imgId } } },
         { new: true }
       );
+      res.status(204).end();
     } catch (err) {
       console.log(err);
+      res.status(500).json({ error: "Internal Server Error" });
     }
   }
 );
