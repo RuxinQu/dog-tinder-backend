@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const { User } = require("../models");
 const { upload, removeFileFromS3 } = require("../util/imageHelper");
 const { signToken, isLoggedIn } = require("../util/auth");
-const { generateHtml, transporter } = require("../util/emailHelper");
+const { sendEmail } = require("../util/emailHelper");
 require("dotenv").config();
 
 router.post("/register", async (req, res) => {
@@ -11,38 +11,23 @@ router.post("/register", async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-
+    // if no user found, create a new user and send verificaion email
     if (!user) {
+      const emailToken = crypto.randomBytes(64).toString("hex");
       const newUser = await User.create({
         email,
         password,
-        emailToken: crypto.randomBytes(64).toString("hex"),
+        emailToken,
       });
-      newUser
-        ? res.status(200).send({ message: "User created successfully" })
-        : res.status(404).send({ message: "Failed to create new user" });
+      if (newUser) {
+        return await sendEmail(emailToken, req, res);
+      } else {
+        res.status(404).send({ message: "Failed to create new user" });
+      }
     }
-    if (!user?.isVerified) {
-      const savedToken = user.emailToken;
-      const html = generateHtml(savedToken);
-      transporter.sendMail(
-        {
-          from: process.env.EMAIL,
-          to: email,
-          subject: "Dog Tinder Email Verification",
-          html,
-          text: JSON.stringify(req.body),
-        },
-        function (err, data) {
-          if (err) {
-            res.status(400).json({ message: "Failed to send email." });
-          } else {
-            console.log("Email sent successfully");
-            res.status(200).json({ message: "Email sent." });
-          }
-        }
-      );
-    }
+    //if user is found but not verified, send an email
+    if (!user?.isVerified) await sendEmail(user.emailToken, req, res);
+
     if (user.isVerified)
       res.status(400).send({ message: "This user already exist" });
   } catch (err) {

@@ -38,4 +38,22 @@ const generateHtml = (emailToken) => {
   </html>`;
 };
 
-module.exports = { transporter, generateHtml };
+const sendEmail = async (emailToken, req, res) => {
+  const html = generateHtml(emailToken);
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: req.body.email,
+      subject: "Dog Tinder Email Verification",
+      html,
+      text: JSON.stringify(req.body),
+    });
+    console.log("Email sent successfully");
+    res.status(200).json({ message: "Email sent." });
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({ message: "Failed to send email." });
+  }
+};
+
+module.exports = { sendEmail };
