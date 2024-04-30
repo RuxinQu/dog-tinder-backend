@@ -38,6 +38,13 @@ const userSchema = new Schema(
     },
     imgs: [imageSchema],
     matches: [String],
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailToken: {
+      type: String,
+    },
   },
   {
     toJSON: {

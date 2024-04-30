@@ -1,22 +1,77 @@
 const router = require("express").Router();
+const crypto = require("crypto");
 const { User } = require("../models");
 const { upload, removeFileFromS3 } = require("../util/imageHelper");
 const { signToken, isLoggedIn } = require("../util/auth");
+const { generateHtml, transporter } = require("../util/emailHelper");
+require("dotenv").config();
 
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
+
   try {
     const user = await User.findOne({ email });
+
     if (!user) {
-      const newUser = await User.create({ email, password });
-      !newUser
-        ? res.status(404).send({ message: "Failed to find the user" })
-        : res.status(200).send({ token: signToken(newUser), user: newUser });
-    } else {
-      res.status(400).send({ message: "This email already exist" });
+      const newUser = await User.create({
+        email,
+        password,
+        emailToken: crypto.randomBytes(64).toString("hex"),
+      });
+      newUser
+        ? res.status(200).send({ message: "User created successfully" })
+        : res.status(404).send({ message: "Failed to create new user" });
     }
+    if (!user?.isVerified) {
+      const savedToken = user.emailToken;
+      const html = generateHtml(savedToken);
+      transporter.sendMail(
+        {
+          from: process.env.EMAIL,
+          to: email,
+          subject: "Dog Tinder Email Verification",
+          html,
+          text: JSON.stringify(req.body),
+        },
+        function (err, data) {
+          if (err) {
+            res.status(400).json({ message: "Failed to send email." });
+          } else {
+            console.log("Email sent successfully");
+            res.status(200).json({ message: "Email sent." });
+          }
+        }
+      );
+    }
+    if (user.isVerified)
+      res.status(400).send({ message: "This user already exist" });
   } catch (err) {
     console.log(err);
+  }
+});
+
+router.post("/verify", async (req, res) => {
+  const { emailToken } = req.body;
+  if (!emailToken) return res.status(404).json({ message: "Token not found." });
+  const user = await User.findOneAndUpdate(
+    { emailToken },
+    {
+      emailToken: null,
+      isVerified: true,
+    },
+    { new: true }
+  );
+
+  if (!user)
+    res
+      .status(404)
+      .json({ message: "Email verification failed. Invalid token." });
+  else {
+    res.status(200).json({
+      token: signToken(user),
+      _id: user._id,
+      isVerified: user?.isVerified,
+    });
   }
 });
 
@@ -27,6 +82,11 @@ router.post("/login", async (req, res) => {
     if (!user) {
       res.status(404).send({ message: "No user with this email found" });
       return;
+    }
+    if (!user.isVerified) {
+      res
+        .status(404)
+        .send({ message: "Email not verified. Please register first." });
     }
     const checkPw = await user.isCorrectPassword(password);
     if (!checkPw) {

@@ -24,7 +24,6 @@ const isLoggedIn = (req, res, next) => {
     req.user = data;
     next();
   } catch {
-    console.log("Invalid token");
     return res.status(401).json({ message: "Invalid token" });
   }
 };
